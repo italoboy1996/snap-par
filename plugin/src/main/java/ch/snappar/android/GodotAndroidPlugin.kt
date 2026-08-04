@@ -18,6 +18,7 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         private const val REQUEST_GALLERY = 4102
         private const val SIGNAL_IMAGE_SELECTED = "image_selected"
         private const val SIGNAL_MEDIA_ERROR = "media_error"
+        private const val FILE_PROVIDER_AUTHORITY = "ch.snappar.game.snappar.files"
     }
 
     private var pendingPhotoFile: File? = null
@@ -139,7 +140,7 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
     }
 
     private fun fileUri(host: Activity, file: File): Uri =
-        FileProvider.getUriForFile(host, "${host.packageName}.snappar.files", file)
+        FileProvider.getUriForFile(host, FILE_PROVIDER_AUTHORITY, file)
 
     private fun emitImage(path: String) {
         runOnRenderThread { emitSignal(SIGNAL_IMAGE_SELECTED, path) }
