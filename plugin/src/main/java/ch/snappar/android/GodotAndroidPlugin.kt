@@ -32,8 +32,8 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
 
     @UsedByGodot
     fun takePhoto() {
-        runOnHostThread {
-            val host = activity ?: return@runOnHostThread emitError("Kamera ist nicht verfuegbar")
+        val host = activity ?: return emitError("Kamera ist nicht verfuegbar")
+        host.runOnUiThread {
             try {
                 val output = File.createTempFile("snap-par-camera-", ".jpg", host.cacheDir)
                 val uri = fileUri(host, output)
@@ -44,7 +44,7 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
                 if (intent.resolveActivity(host.packageManager) == null) {
                     output.delete()
                     emitError("Keine Kamera-App gefunden")
-                    return@runOnHostThread
+                    return@runOnUiThread
                 }
                 pendingPhotoFile = output
                 host.startActivityForResult(intent, REQUEST_CAMERA)
@@ -56,15 +56,15 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
 
     @UsedByGodot
     fun pickImage() {
-        runOnHostThread {
-            val host = activity ?: return@runOnHostThread emitError("Galerie ist nicht verfuegbar")
+        val host = activity ?: return emitError("Galerie ist nicht verfuegbar")
+        host.runOnUiThread {
             val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
                 addCategory(Intent.CATEGORY_OPENABLE)
                 type = "image/*"
             }
             if (intent.resolveActivity(host.packageManager) == null) {
                 emitError("Keine Galerie-App gefunden")
-                return@runOnHostThread
+                return@runOnUiThread
             }
             host.startActivityForResult(intent, REQUEST_GALLERY)
         }
@@ -72,12 +72,12 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
 
     @UsedByGodot
     fun shareImage(path: String) {
-        runOnHostThread {
-            val host = activity ?: return@runOnHostThread emitError("Teilen ist nicht verfuegbar")
+        val host = activity ?: return emitError("Teilen ist nicht verfuegbar")
+        host.runOnUiThread {
             val file = File(path)
             if (!file.isFile) {
                 emitError("Das Bild zum Teilen fehlt")
-                return@runOnHostThread
+                return@runOnUiThread
             }
             try {
                 val uri = fileUri(host, file)
