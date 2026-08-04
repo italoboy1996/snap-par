@@ -8,6 +8,11 @@ on:
 
 permissions:
   contents: read
+  issues: write
+
+concurrency:
+  group: android-build-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   android:
@@ -18,66 +23,102 @@ jobs:
       ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
+
       - uses: android-actions/setup-android@v3
+
       - name: Install Android SDK 34
         run: |
-          yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          mkdir -p build
+          set -o pipefail
+          {
+            yes | sdkmanager --licenses >/dev/null || true
+            sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          } 2>&1 | tee build/android-sdk.log
+
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.7"
+
       - name: Install Godot 4.3 and templates
         run: |
-          curl -fL --retry 3 -o godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
-          curl -fL --retry 3 -o templates.tpz "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
-          unzip -q godot.zip
-          mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" godot
-          chmod +x godot
-          TEMPLATE_DIR="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
-          mkdir -p "$TEMPLATE_DIR" /tmp/templates "$HOME/.config/godot"
-          unzip -q templates.tpz -d /tmp/templates
-          cp -a /tmp/templates/templates/. "$TEMPLATE_DIR/"
-          mkdir -p android/build
-          unzip -q "$TEMPLATE_DIR/android_source.zip" -d android/build
-          cat > "$HOME/.config/godot/editor_settings-4.tres" <<EOF
+          mkdir -p build
+          set -o pipefail
+          {
+            curl -fL --retry 3 -o godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+            curl -fL --retry 3 -o templates.tpz "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+            unzip -q godot.zip
+            mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" godot
+            chmod +x godot
+            TEMPLATE_DIR="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+            mkdir -p "$TEMPLATE_DIR" /tmp/templates "$HOME/.config/godot"
+            unzip -q templates.tpz -d /tmp/templates
+            cp -a /tmp/templates/templates/. "$TEMPLATE_DIR/"
+            mkdir -p android/build
+            unzip -q "$TEMPLATE_DIR/android_source.zip" -d android/build
+            cat > "$HOME/.config/godot/editor_settings-4.tres" <<EOF
           [gd_resource format=3]
           [resource]
           export/android/android_sdk_path = "$ANDROID_HOME"
           export/android/java_sdk_path = "$JAVA_HOME"
           EOF
+          } 2>&1 | tee build/godot-install.log
+
       - name: Build Android media plugin
         run: |
-          gradle :plugin:packagePlugin --stacktrace
-          test -f addons/SnapParAndroid/bin/debug/SnapParAndroid-debug.aar
+          mkdir -p build
+          set -o pipefail
+          {
+            gradle :plugin:packagePlugin --stacktrace
+            test -f addons/SnapParAndroid/bin/debug/SnapParAndroid-debug.aar
+            test -f addons/SnapParAndroid/bin/release/SnapParAndroid-release.aar
+          } 2>&1 | tee build/plugin-build.log
+
       - name: Run terrain tests
-        run: ./godot --headless --path . --script scripts/tests/terrain_tests.gd
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script scripts/tests/terrain_tests.gd 2>&1 | tee build/terrain-tests.log
+
       - name: Import project
-        run: ./godot --headless --editor --path . --quit
+        run: |
+          set -o pipefail
+          ./godot --headless --editor --path . --quit 2>&1 | tee build/godot-import.log
+
       - name: Create debug keystore
         run: |
-          keytool -genkeypair -keystore /tmp/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Snap Par,C=CH"
+          set -o pipefail
+          keytool -genkeypair -keystore /tmp/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Snap Par,C=CH" 2>&1 | tee build/keystore.log
+
       - name: Export debug APK
         env:
           GODOT_ANDROID_KEYSTORE_DEBUG_PATH: /tmp/debug.keystore
           GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
           GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
         run: |
-          mkdir -p build
-          ./godot --headless --path . --export-debug "Android Debug" build/snap-par-debug.apk
-          test -s build/snap-par-debug.apk
+          set -o pipefail
+          {
+            ./godot --headless --path . --export-debug "Android Debug" build/snap-par-debug.apk
+            test -s build/snap-par-debug.apk
+          } 2>&1 | tee build/apk-export.log
+
       - name: Verify no INTERNET permission
         run: |
-          PERMISSIONS="$($ANDROID_HOME/build-tools/34.0.0/aapt dump permissions build/snap-par-debug.apk)"
-          echo "$PERMISSIONS"
-          ! grep -q "android.permission.INTERNET" <<< "$PERMISSIONS"
+          set -o pipefail
+          {
+            PERMISSIONS="$($ANDROID_HOME/build-tools/34.0.0/aapt dump permissions build/snap-par-debug.apk)"
+            echo "$PERMISSIONS"
+            ! grep -q "android.permission.INTERNET" <<< "$PERMISSIONS"
+          } 2>&1 | tee build/permission-check.log
+
       - uses: actions/upload-artifact@v4
         with:
           name: snap-par-debug-apk
           path: build/snap-par-debug.apk
+
       - name: Prepare release keystore
         if: startsWith(github.ref, 'refs/tags/v')
         env:
@@ -86,10 +127,14 @@ jobs:
           STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          test -n "$KEYSTORE_BASE64" && test -n "$KEYSTORE_ALIAS" && test -n "$STORE_PASSWORD" && test -n "$KEY_PASSWORD"
-          test "$STORE_PASSWORD" = "$KEY_PASSWORD"
-          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > /tmp/release.keystore
-          keytool -list -keystore /tmp/release.keystore -storepass "$STORE_PASSWORD" -alias "$KEYSTORE_ALIAS" >/dev/null
+          set -o pipefail
+          {
+            test -n "$KEYSTORE_BASE64" && test -n "$KEYSTORE_ALIAS" && test -n "$STORE_PASSWORD" && test -n "$KEY_PASSWORD"
+            test "$STORE_PASSWORD" = "$KEY_PASSWORD"
+            printf '%s' "$KEYSTORE_BASE64" | base64 --decode > /tmp/release.keystore
+            keytool -list -keystore /tmp/release.keystore -storepass "$STORE_PASSWORD" -alias "$KEYSTORE_ALIAS" >/dev/null
+          } 2>&1 | tee build/release-keystore.log
+
       - name: Export signed AAB
         if: startsWith(github.ref, 'refs/tags/v')
         env:
@@ -97,10 +142,35 @@ jobs:
           GODOT_ANDROID_KEYSTORE_RELEASE_USER: ${{ secrets.ANDROID_KEY_ALIAS }}
           GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
-          ./godot --headless --path . --export-release "Android Release" build/snap-par-release.aab
-          test -s build/snap-par-release.aab
+          set -o pipefail
+          {
+            ./godot --headless --path . --export-release "Android Release" build/snap-par-release.aab
+            test -s build/snap-par-release.aab
+          } 2>&1 | tee build/aab-export.log
+
       - uses: actions/upload-artifact@v4
         if: startsWith(github.ref, 'refs/tags/v')
         with:
           name: snap-par-release-aab
           path: build/snap-par-release.aab
+
+      - name: Report build failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p build
+          {
+            echo "Android Build #${GITHUB_RUN_NUMBER} ist fehlgeschlagen."
+            echo
+            echo "Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            echo "Commit: ${GITHUB_SHA}"
+            echo
+            echo '```text'
+            for file in build/*.log; do
+              echo "===== ${file} ====="
+              tail -n 160 "$file"
+            done
+            echo '```'
+          } > build/ci-failure.md
+          gh issue create --title "CI failure Android Build #${GITHUB_RUN_NUMBER}" --body-file build/ci-failure.md
