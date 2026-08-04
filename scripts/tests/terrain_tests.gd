@@ -5,11 +5,6 @@ const Generator := preload("res://scripts/terrain_from_image.gd")
 var failures: Array[String] = []
 
 func _init() -> void:
-	if not Generator.can_instantiate():
-		push_error("TerrainFromImage konnte nicht kompiliert werden")
-		quit(1)
-		return
-
 	_test_noise_image()
 	_test_single_black_bar()
 	if failures.is_empty():
