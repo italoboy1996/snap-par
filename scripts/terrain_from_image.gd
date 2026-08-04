@@ -88,7 +88,7 @@ func _cover_crop(source: Image, target_size: Vector2i) -> Image:
 		crop_rect.position.y = (working.get_height() - crop_height) / 2
 		crop_rect.size.y = crop_height
 
-	var cropped := working.get_region(crop_rect)
+	var cropped: Image = working.get_region(crop_rect)
 	cropped.resize(target_size.x, target_size.y, Image.INTERPOLATE_BILINEAR)
 	return cropped
 
