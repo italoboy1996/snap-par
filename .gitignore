@@ -1,0 +1,24 @@
+# Godot generated files
+.godot/
+.android/
+android/build/
+
+# Build output
+build/*
+!build/.gitkeep
+
+# Android plugin output
+addons/SnapParAndroid/bin/
+plugin/build/
+.gradle/
+
+# Signing material
+*.keystore
+*.jks
+export_credentials.cfg
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

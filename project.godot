@@ -1,0 +1,39 @@
+config_version=5
+
+[application]
+
+config/name="Snap Par"
+run/main_scene="res://scenes/Boot.tscn"
+config/features=PackedStringArray("4.3", "GL Compatibility")
+config/icon="res://assets/icon.svg"
+boot_splash/bg_color=Color(0, 0, 0, 1)
+
+[autoload]
+
+AppState="*res://scripts/app_state.gd"
+MediaBridge="*res://scripts/media_bridge.gd"
+AudioFx="*res://scripts/audio_fx.gd"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/SnapParAndroid/plugin.cfg")
+
+[display]
+
+window/size/viewport_width=1080
+window/size/viewport_height=1920
+window/size/window_width_override=540
+window/size/window_height_override=960
+window/stretch/mode="canvas_items"
+window/stretch/aspect="keep_height"
+window/handheld/orientation=1
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+environment/defaults/default_clear_color=Color(0, 0, 0, 1)
+
+[physics]
+
+2d/default_gravity=980.0
