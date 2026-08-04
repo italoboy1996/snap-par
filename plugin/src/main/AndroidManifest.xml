@@ -11,7 +11,7 @@
             android:value="${godotPluginPackageName}.GodotAndroidPlugin" />
 
         <provider
-            android:name="androidx.core.content.FileProvider"
+            android:name="${godotPluginPackageName}.SnapParFileProvider"
             android:authorities="ch.snappar.game.snappar.files"
             android:exported="false"
             android:grantUriPermissions="true">
