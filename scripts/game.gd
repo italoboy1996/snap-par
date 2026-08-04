@@ -81,6 +81,8 @@ func _build_level(image: Image) -> void:
 	terrain_result = generated
 	var display_image: Image = terrain_result.display_image
 	photo.texture = ImageTexture.create_from_image(display_image)
+	photo.visible = true
+	photo.modulate = Color.WHITE
 	overlay.set_cells(terrain_result.cells)
 
 	_build_material_collision(rock_body, Generator.ROCK, "rock", 0.60, 0.40)
@@ -239,7 +241,7 @@ func _complete_hole() -> void:
 	ball.position = hole.position
 	Input.vibrate_handheld(70)
 	AudioFx.play_hole()
-	state_label.text = "Loch geschafft"
+	state_label.text = "LOCH GESCHAFFT"
 	await get_tree().process_frame
 	hud.visible = false
 	await get_tree().process_frame
@@ -340,5 +342,5 @@ func _show_error(message: String) -> void:
 	error_panel.visible = true
 
 func _update_hud() -> void:
-	strokes_label.text = "Schlaege  %d" % strokes
-	par_label.text = "Par  %d" % par
+	strokes_label.text = "SCHLAEGE  %d" % strokes
+	par_label.text = "PAR  %d" % par
