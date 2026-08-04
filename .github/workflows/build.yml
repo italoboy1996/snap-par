@@ -61,6 +61,8 @@ jobs:
             cp -a /tmp/templates/templates/. "$TEMPLATE_DIR/"
             mkdir -p android/build
             unzip -q "$TEMPLATE_DIR/android_source.zip" -d android/build
+            printf '%s\n' "${GODOT_VERSION}.stable" > android/.build_version
+            : > android/build/.gdignore
             rm -f "$HOME/.config/godot/editor_settings-4.tres"
           } 2>&1 | tee build/godot-install.log
 
