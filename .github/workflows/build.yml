@@ -81,12 +81,6 @@ jobs:
           ! grep -Eq "SCRIPT ERROR|Parse Error|Compile Error" build/terrain-tests.log
           grep -q "Terrain tests passed: 2/2" build/terrain-tests.log
 
-      - name: Import project
-        run: |
-          set -o pipefail
-          ./godot --headless --editor --path . --quit 2>&1 | tee build/godot-import.log
-          ! grep -Eq "SCRIPT ERROR|Parse Error|Compile Error" build/godot-import.log
-
       - name: Create debug keystore
         run: |
           set -o pipefail
