@@ -12,6 +12,8 @@ import org.godotengine.godot.plugin.UsedByGodot
 import java.io.File
 import java.io.FileOutputStream
 
+class SnapParFileProvider : FileProvider()
+
 class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
     companion object {
         private const val REQUEST_CAMERA = 4101
